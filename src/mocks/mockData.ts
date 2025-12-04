@@ -149,9 +149,29 @@ export const MOCK_PUBLISHERS: Publisher[] = [
 ];
 
 export const MOCK_HISTORY: AssignmentHistory[] = [
-  { historyId: 'hist-001', publisherId: 'pub-001', date: '2025-11-20', assignmentType: 'TEACHING', partType: 'Necessidades Locais' },
-  { historyId: 'hist-002', publisherId: 'pub-003', date: '2025-11-20', assignmentType: 'STUDENT', partType: 'Leitura da Bíblia' },
-  { historyId: 'hist-003', publisherId: 'pub-004', date: '2025-11-13', assignmentType: 'STUDENT', partType: 'Demonstração' },
+  {
+    historyId: 'hist-001',
+    publisherId: 'pub-001',
+    date: '2025-11-20',
+    assignmentType: 'TEACHING',
+    partType: 'Necessidades Locais',
+    cooldownGroup: 'TESOUROS_DISCURSO'
+  },
+  {
+    historyId: 'hist-002',
+    publisherId: 'pub-003',
+    date: '2025-11-20',
+    assignmentType: 'STUDENT',
+    partType: 'Leitura da Bíblia',
+    cooldownGroup: 'LEITURA_BIBLIA'
+  },
+  {
+    historyId: 'hist-003',
+    publisherId: 'pub-004',
+    date: '2025-11-13',
+    assignmentType: 'STUDENT',
+    partType: 'Demonstração'
+  },
 ];
 
 export const MOCK_MEETING_WEEK: MeetingPart[] = [
@@ -166,7 +186,9 @@ export const MOCK_MEETING_WEEK: MeetingPart[] = [
     requiredGender: 'M',
     requiresHelper: false,
     requiresApprovalByElder: false,
+    allowsPendingApproval: false,
     duration: 10,
+    cooldownGroup: 'TESOUROS_DISCURSO',
   },
   {
     partId: 'part-002',
@@ -178,7 +200,9 @@ export const MOCK_MEETING_WEEK: MeetingPart[] = [
     requiredGender: 'M',
     requiresHelper: false,
     requiresApprovalByElder: false,
+    allowsPendingApproval: false,
     duration: 10,
+    cooldownGroup: 'TESOUROS_DISCURSO',
   },
   {
     partId: 'part-003',
@@ -190,7 +214,9 @@ export const MOCK_MEETING_WEEK: MeetingPart[] = [
     requiredGender: 'M',
     requiresHelper: false,
     requiresApprovalByElder: false,
+    allowsPendingApproval: true,
     duration: 4,
+    cooldownGroup: 'LEITURA_BIBLIA',
   },
   // FAÇA SEU MELHOR NO MINISTÉRIO
   {
@@ -203,7 +229,9 @@ export const MOCK_MEETING_WEEK: MeetingPart[] = [
     requiredGender: 'OTHER',
     requiresHelper: true,
     requiresApprovalByElder: false,
+    helperRequirements: { requiredGender: 'F' },
     duration: 3,
+    cooldownGroup: 'MINISTERIO_INICIO',
   },
   {
     partId: 'part-005',
@@ -215,7 +243,9 @@ export const MOCK_MEETING_WEEK: MeetingPart[] = [
     requiredGender: 'OTHER',
     requiresHelper: true,
     requiresApprovalByElder: true,
+    helperRequirements: { requiredPrivileges: ['PIONEIRO'] },
     duration: 4,
+    cooldownGroup: 'MINISTERIO_ESTUDO',
   },
   {
     partId: 'part-006',
@@ -228,6 +258,7 @@ export const MOCK_MEETING_WEEK: MeetingPart[] = [
     requiresHelper: true,
     requiresApprovalByElder: false,
     duration: 5,
+    cooldownGroup: 'MINISTERIO_ESTUDO',
   },
   // NOSSA VIDA CRISTÃ
   {
@@ -240,7 +271,10 @@ export const MOCK_MEETING_WEEK: MeetingPart[] = [
     requiredGender: 'M',
     requiresHelper: false,
     requiresApprovalByElder: false,
+    specialTag: 'EBC_DIRIGENTE',
+    allowsPendingApproval: false,
     duration: 30,
+    cooldownGroup: 'EBC_DIRIGENTE',
   },
   {
     partId: 'part-008',
@@ -252,6 +286,38 @@ export const MOCK_MEETING_WEEK: MeetingPart[] = [
     requiredGender: 'M',
     requiresHelper: false,
     requiresApprovalByElder: false,
+    specialTag: 'EBC_LEITOR',
+    allowsPendingApproval: true,
     duration: 30,
+    cooldownGroup: 'EBC_LEITOR',
+  },
+  // Partes extras para testar alertas do motor
+  {
+    partId: 'part-009',
+    week: '2025-12-01',
+    partType: 'Demonstração Especial para Irmãs',
+    section: 'MINISTERIO',
+    teachingCategory: 'TEACHING',
+    requiredPrivileges: ['ANCIÃO'],
+    requiredGender: 'F',
+    requiresHelper: false,
+    requiresApprovalByElder: false,
+    allowsPendingApproval: false,
+    duration: 5,
+    cooldownGroup: 'MINISTERIO_ESPECIAL',
+  },
+  {
+    partId: 'part-010',
+    week: '2025-12-01',
+    partType: 'Demonstração Dirigida com Ancião',
+    section: 'MINISTERIO',
+    teachingCategory: 'STUDENT',
+    requiredPrivileges: [],
+    requiredGender: 'OTHER',
+    requiresHelper: true,
+    helperRequirements: { requiredPrivileges: ['ANCIÃO'] },
+    requiresApprovalByElder: false,
+    duration: 4,
+    cooldownGroup: 'MINISTERIO_SUPORTE',
   },
 ];

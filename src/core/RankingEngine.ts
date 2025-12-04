@@ -59,18 +59,25 @@ export class RankingEngine {
 
     score += daysSinceLast;
 
-    // 3. Aplicar Penalidade de Cooldown (Repetição do mesmo tipo de parte)
-    // Regra: Penalizar severamente se fez o mesmo 'partType' nas últimas 8 semanas (56 dias)
+    // 3. Aplicar Penalidade de Cooldown (Repetição do mesmo tipo de parte ou grupo)
+    // Regra: Penalizar severamente se fez o mesmo 'partType' ou 'cooldownGroup' nas últimas 8 semanas (56 dias)
     const COOLDOWN_DAYS = 56;
-    const recentSameType = publisherHistory.find(h => 
-      h.partType === part.partType &&
-      this.getDaysDiff(meetingDate, h.date) <= COOLDOWN_DAYS
-    );
+    const appliesCooldown = (entry: AssignmentHistory): boolean => {
+      const groupMatches = part.cooldownGroup
+        ? entry.cooldownGroup === part.cooldownGroup
+        : entry.partType === part.partType;
+      return groupMatches && this.getDaysDiff(meetingDate, entry.date) <= COOLDOWN_DAYS;
+    };
 
-    if (recentSameType) {
+    const recentSameBucket = publisherHistory.find(appliesCooldown);
+
+    if (recentSameBucket) {
       const penalty = 500; // Penalidade alta para jogar para o fim da fila
       score -= penalty;
-      debugInfo.push(`PENALIDADE: Fez '${part.partType}' há ${this.getDaysDiff(meetingDate, recentSameType.date)} dias (-${penalty})`);
+      const bucketLabel = part.cooldownGroup ?? part.partType;
+      debugInfo.push(
+        `PENALIDADE: '${bucketLabel}' há ${this.getDaysDiff(meetingDate, recentSameBucket.date)} dias (-${penalty})`
+      );
     }
 
     return { publisher, score, debugInfo };

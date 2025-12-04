@@ -1,12 +1,14 @@
 import { useMemo, useState, useEffect } from 'react';
 import { AssignmentEngine } from './core/AssignmentEngine';
 import { MOCK_HISTORY, MOCK_MEETING_WEEK, MOCK_PUBLISHERS } from './mocks/mockData';
-import { Calendar, CheckCircle2, AlertCircle, Clock, User, Users, RefreshCw, ChevronRight, ChevronLeft, Printer, Check, ArrowLeft, Download } from 'lucide-react';
-import { Assignment } from './types/models';
+import { Calendar, CheckCircle2, AlertCircle, AlertTriangle, Clock, User, Users, RefreshCw, ChevronRight, ChevronLeft, Printer, Check, ArrowLeft, Download } from 'lucide-react';
+import { Assignment, AssignmentWarning, GenerateAssignmentsResponse } from './types/models';
 import { PublisherDetailsModal } from './components/PublisherDetailsModal';
 import { PublisherSelectionModal } from './components/PublisherSelectionModal';
 import { PrintLayout } from './components/PrintLayout';
 import html2canvas from 'html2canvas';
+
+const ASSIGNMENTS_API_URL = import.meta.env.VITE_ASSIGNMENTS_API ?? 'http://127.0.0.1:3333/api/generateAssignments';
 
 function App() {
   console.log('App component rendering...');
@@ -15,7 +17,9 @@ function App() {
 
   // State for assignments
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [warnings, setWarnings] = useState<AssignmentWarning[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // State for selection
   const [selectedPublisherId, setSelectedPublisherId] = useState<string | null>(null);
@@ -32,22 +36,73 @@ function App() {
 
   // Generate assignments when date or version changes
   useEffect(() => {
-    console.log('Generating assignments for date:', meetingDate);
-    try {
-      const newAssignments = AssignmentEngine.generateAssignments(
-        MOCK_MEETING_WEEK,
-        MOCK_PUBLISHERS,
-        MOCK_HISTORY,
-        meetingDate
-      );
-      console.log('Assignments generated:', newAssignments.length);
-      setAssignments(newAssignments);
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const payload = {
+      meetingDate,
+      parts: MOCK_MEETING_WEEK,
+      publishers: MOCK_PUBLISHERS,
+      history: MOCK_HISTORY
+    };
+
+    const fetchAssignments = async () => {
+      setIsLoading(true);
       setError(null);
-    } catch (error) {
-      console.error("Erro ao gerar designações:", error);
-      setError(error instanceof Error ? error.message : String(error));
-      setAssignments([]);
-    }
+      try {
+        const response = await fetch(ASSIGNMENTS_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error(`API retornou status ${response.status}`);
+        }
+
+        const data: GenerateAssignmentsResponse = await response.json();
+        if (!isMounted) return;
+        setAssignments(data.assignments);
+        setWarnings(data.warnings ?? []);
+      } catch (apiError) {
+        console.error('[App] Falha ao chamar API. Recuando para motor local.', apiError);
+        if (!isMounted) return;
+        try {
+          const fallbackResult = AssignmentEngine.generateAssignments(
+            payload.parts,
+            payload.publishers,
+            payload.history,
+            meetingDate
+          );
+          setAssignments(fallbackResult.assignments);
+          setWarnings([
+            ...fallbackResult.warnings,
+            {
+              type: 'API_FALLBACK',
+              message: 'API indisponível. Dados exibidos a partir do motor local.'
+            }
+          ]);
+          setError('API indisponível. Exibindo dados do motor local.');
+        } catch (localError) {
+          console.error('[App] Falha no motor local', localError);
+          setAssignments([]);
+          setWarnings([]);
+          setError(localError instanceof Error ? localError.message : String(localError));
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchAssignments();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, [meetingDate, version]);
 
   const handleApproveWeek = () => {
@@ -189,6 +244,7 @@ function App() {
             assignments={assignments}
             publishers={MOCK_PUBLISHERS}
             meetingParts={MOCK_MEETING_WEEK}
+            warnings={warnings}
           />
         </div>
       </div>
@@ -207,10 +263,11 @@ function App() {
             <div className="flex gap-3">
               <button 
                 onClick={() => setVersion(v => v + 1)}
-                className="flex items-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 border border-gray-200 transition-colors shadow-sm"
+                className="flex items-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 border border-gray-200 transition-colors shadow-sm disabled:opacity-60"
+                disabled={isLoading}
               >
-                <RefreshCw className="w-4 h-4" />
-                Regerar
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Gerando...' : 'Regerar'}
               </button>
               <button 
                 onClick={handlePrint}
@@ -232,13 +289,24 @@ function App() {
                   value={meetingDate}
                   onChange={(e) => setMeetingDate(e.target.value)}
                   className="bg-transparent border-none focus:ring-0 text-gray-900 font-bold"
+                  aria-label="Selecionar semana"
                 />
               </div>
               <div className="flex gap-2">
-                <button onClick={() => changeWeek(-1)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                <button
+                  onClick={() => changeWeek(-1)}
+                  className="p-2 hover:bg-gray-100 rounded-full text-gray-500"
+                  aria-label="Semana anterior"
+                  title="Semana anterior"
+                >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <button onClick={() => changeWeek(1)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                <button
+                  onClick={() => changeWeek(1)}
+                  className="p-2 hover:bg-gray-100 rounded-full text-gray-500"
+                  aria-label="Próxima semana"
+                  title="Próxima semana"
+                >
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
@@ -259,6 +327,12 @@ function App() {
                   Aprovar Semana
                 </button>
               )}
+              {isLoading && (
+                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Gerando na API…
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -269,6 +343,25 @@ function App() {
             <div>
               <h3 className="font-bold text-red-800">Erro na Geração</h3>
               <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {warnings.length > 0 && (
+          <div className="mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
+            <div>
+              <h3 className="font-bold text-amber-900">Alertas de Designação</h3>
+              <ul className="mt-1 text-amber-800 text-sm space-y-1">
+                {warnings.map((warning) => {
+                  const part = warning.meetingPartId ? getPart(warning.meetingPartId) : null;
+                  return (
+                    <li key={`${warning.meetingPartId}-${warning.type}`}>
+                      <span className="font-semibold">{part?.partType ?? 'Parte não identificada'}:</span> {warning.message}
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           </div>
         )}

@@ -15,7 +15,7 @@ console.log(`Partes na Pauta: ${MOCK_MEETING_WEEK.length}`);
 console.log('------------------------------------------------');
 
 // Executa o motor
-const assignments = AssignmentEngine.generateAssignments(
+const { assignments, warnings } = AssignmentEngine.generateAssignments(
   MOCK_MEETING_WEEK,
   MOCK_PUBLISHERS,
   MOCK_HISTORY,
@@ -45,3 +45,10 @@ assignments.forEach(assignment => {
 });
 
 console.log('=== FIM DO TESTE ===');
+
+if (warnings.length > 0) {
+  console.log('\n=== ALERTAS GERADOS ===');
+  warnings.forEach(warning => {
+    console.log(`- [${warning.type}] Parte ${warning.meetingPartId}: ${warning.message}`);
+  });
+}

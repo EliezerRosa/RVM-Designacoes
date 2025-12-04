@@ -1,4 +1,4 @@
-import { Assignment, AssignmentHistory, MeetingPart, Publisher } from '../types/models';
+import { Assignment, AssignmentHistory, AssignmentResult, AssignmentWarning, MeetingPart, Publisher } from '../types/models';
 import { AssignmentFilter } from './AssignmentFilter';
 import { RankingEngine } from './RankingEngine';
 import { TimingCalculator } from './TimingCalculator';
@@ -20,8 +20,10 @@ export class AssignmentEngine {
     publishers: Publisher[],
     history: AssignmentHistory[],
     meetingDate: string
-  ): Assignment[] {
+  ): AssignmentResult {
+    this.assertPartDurations(parts);
     const assignments: Assignment[] = [];
+    const warnings: AssignmentWarning[] = [];
 
     for (const part of parts) {
       // --- 1. Selecionar Titular (Principal) ---
@@ -30,13 +32,17 @@ export class AssignmentEngine {
         publishers,
         assignments,
         history,
-        meetingDate
+        meetingDate,
+        { mode: 'principal' }
       );
 
       if (!principalId) {
         console.warn(`[AssignmentEngine] Alerta: Nenhum candidato elegível para a parte '${part.partType}'`);
-        // Em um sistema real, criaríamos uma notificação ou designação com erro.
-        // Aqui, pulamos para não quebrar o fluxo, mas a parte ficará vaga.
+        warnings.push({
+          type: 'NO_CANDIDATE',
+          meetingPartId: part.partId,
+          message: `Nenhum candidato elegível para '${part.partType}'.`
+        });
         continue;
       }
 
@@ -53,13 +59,21 @@ export class AssignmentEngine {
           assignments,
           history,
           meetingDate,
-          principalId // Exclui o titular da lista de candidatos a ajudante
+          {
+            excludePublisherId: principalId,
+            mode: 'helper'
+          }
         );
         
         if (candidateId) {
           secondaryId = candidateId;
         } else {
           console.warn(`[AssignmentEngine] Alerta: Titular selecionado, mas sem ajudante para '${part.partType}'`);
+          warnings.push({
+            type: 'HELPER_MISSING',
+            meetingPartId: part.partId,
+            message: `Parte '${part.partType}' ficou sem ajudante elegível.`
+          });
         }
       }
 
@@ -84,7 +98,8 @@ export class AssignmentEngine {
     }
 
     // --- 5. Calcular Cronometragem ---
-    return TimingCalculator.calculateTimings(assignments, parts);
+    const timedAssignments = TimingCalculator.calculateTimings(assignments, parts);
+    return { assignments: timedAssignments, warnings };
   }
 
   /**
@@ -96,14 +111,19 @@ export class AssignmentEngine {
     currentAssignments: Assignment[],
     history: AssignmentHistory[],
     meetingDate: string,
-    excludePublisherId?: string
+    options?: {
+      excludePublisherId?: string;
+      mode?: 'principal' | 'helper';
+    }
   ): string | null {
     // 1. Filtrar (Regras Rígidas)
-    let eligible = AssignmentFilter.getEligibleCandidates(part, allPublishers, currentAssignments);
+    let eligible = AssignmentFilter.getEligibleCandidates(part, allPublishers, currentAssignments, {
+      mode: options?.mode ?? 'principal'
+    });
 
     // Exclusão manual (ex: titular não pode ser ajudante dele mesmo)
-    if (excludePublisherId) {
-      eligible = eligible.filter(p => p.publisherId !== excludePublisherId);
+    if (options?.excludePublisherId) {
+      eligible = eligible.filter(p => p.publisherId !== options.excludePublisherId);
     }
 
     if (eligible.length === 0) return null;
@@ -113,6 +133,16 @@ export class AssignmentEngine {
     
     // 3. Selecionar Top 1
     return ranked[0].publisher.publisherId;
+  }
+
+  private static assertPartDurations(parts: MeetingPart[]): void {
+    parts.forEach(part => {
+      if (typeof part.duration !== 'number') {
+        throw new Error(
+          `[AssignmentEngine] Parte '${part.partType}' sem duração configurada (docs/data-contract.md).`
+        );
+      }
+    });
   }
 
   private static generateUUID(): string {

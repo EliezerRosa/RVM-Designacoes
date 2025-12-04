@@ -1,14 +1,17 @@
-﻿import { useMemo, CSSProperties } from 'react';
-import { Assignment, MeetingPart, Publisher } from '../types/models';
+﻿import { useMemo } from 'react';
+import clsx from 'clsx';
+import { Assignment, AssignmentWarning, MeetingPart, Publisher } from '../types/models';
+import styles from './PrintLayout.module.css';
 
 interface PrintLayoutProps {
   meetingDate: string;
   assignments: Assignment[];
   publishers: Publisher[];
   meetingParts: MeetingPart[];
+  warnings: AssignmentWarning[];
 }
 
-export function PrintLayout({ meetingDate, assignments, publishers, meetingParts }: PrintLayoutProps) {
+export function PrintLayout({ meetingDate, assignments, publishers, meetingParts, warnings }: PrintLayoutProps) {
   
   const getPublisherName = (id?: string) => {
     if (!id) return '---';
@@ -35,114 +38,51 @@ export function PrintLayout({ meetingDate, assignments, publishers, meetingParts
     return grouped;
   }, [assignments, meetingParts]);
 
-  // Styles object to avoid Tailwind OKLCH issues
-  const styles = {
-    container: {
-      fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-      color: '#000000',
-      backgroundColor: '#ffffff',
-      padding: '2rem',
-      width: '100%',
-      height: '100%',
-      margin: '0 auto',
-      boxSizing: 'border-box',
-    } as CSSProperties,
-    header: {
-      textAlign: 'center',
-      borderBottom: '2px solid #1f2937', // gray-800
-      marginBottom: '1.5rem',
-      paddingBottom: '1rem',
-    } as CSSProperties,
-    h1: {
-      fontSize: '1.5rem',
-      fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: '0.025em',
-      color: '#111827', // gray-900
-      margin: 0,
-    } as CSSProperties,
-    p: {
-      fontSize: '1.125rem',
-      color: '#4b5563', // gray-600
-      marginTop: '0.5rem',
-      margin: 0,
-    } as CSSProperties,
-    sectionContainer: {
-      marginBottom: '1.5rem',
-      border: '1px solid #d1d5db', // gray-300
-      pageBreakInside: 'avoid',
-    } as CSSProperties,
-    sectionHeader: (color: string): CSSProperties => ({
-      backgroundColor: color,
-      color: '#ffffff',
-      padding: '0.375rem 0.75rem',
-      fontWeight: '700',
-      textTransform: 'uppercase',
-      fontSize: '0.875rem',
-      letterSpacing: '0.05em',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      printColorAdjust: 'exact',
-      WebkitPrintColorAdjust: 'exact',
-    }),
-    row: {
-      display: 'grid',
-      gridTemplateColumns: '50px 1fr 1fr',
-      gap: '1rem',
-      padding: '0.5rem 0.75rem',
-      alignItems: 'center',
-      fontSize: '0.875rem',
-      borderBottom: '1px solid #e5e7eb', // gray-200
-    } as CSSProperties,
-    time: {
-      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-      color: '#111827', // gray-900
-      fontWeight: '700',
-    } as CSSProperties,
-    partTitle: {
-      fontWeight: '700',
-      color: '#111827', // gray-900',
-      display: 'block',
-    } as CSSProperties,
-    duration: {
-      fontWeight: '400',
-      color: '#4b5563', // gray-600
-    } as CSSProperties,
-    publisher: {
-      fontWeight: '500',
-      color: '#111827', // gray-900',
-      textAlign: 'right',
-    } as CSSProperties,
-    footer: {
-      marginTop: '2rem',
-      fontSize: '10px',
-      textAlign: 'center',
-      color: '#9ca3af', // gray-400
-      borderTop: '1px solid #e5e7eb',
-      paddingTop: '0.5rem',
-    } as CSSProperties
-  };
+  const warningsByPart = useMemo(() => {
+    return warnings.reduce<Record<string, AssignmentWarning[]>>((acc, warning) => {
+      if (!warning.meetingPartId) return acc;
+      if (!acc[warning.meetingPartId]) acc[warning.meetingPartId] = [];
+      acc[warning.meetingPartId].push(warning);
+      return acc;
+    }, {});
+  }, [warnings]);
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={styles.h1}>Nossa Vida e Ministério Cristão</h1>
-        <p style={styles.p}>Programa da Reunião | Semana de {new Date(meetingDate).toLocaleDateString('pt-BR')}</p>
+    <div className={styles.container}>
+      <header className={styles.header}>
+        <h1 className={styles.title}>Nossa Vida e Ministério Cristão</h1>
+        <p className={styles.subtitle}>Programa da Reunião | Semana de {new Date(meetingDate).toLocaleDateString('pt-BR')}</p>
       </header>
+
+      {warnings.length > 0 && (
+        <section className={styles.warningBanner}>
+          <div className={styles.warningTitle}>Alertas para revisão</div>
+          <ul className={styles.warningList}>
+            {warnings.map((warning, index) => {
+              const part = warning.meetingPartId ? getPart(warning.meetingPartId) : null;
+              return (
+                <li key={`${warning.type}-${warning.meetingPartId ?? 'general'}-${index}`} className={styles.warningItem}>
+                  {part ? <strong>{part.partType}:</strong> : <strong>Geral:</strong>} {warning.message}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <div>
         {sections.map(section => {
           const sectionAssignments = assignmentsBySection[section.key] || [];
           if (sectionAssignments.length === 0) return null;
 
-          let headerColor = '#334155'; // slate-700
-          if (section.key === 'MINISTERIO') headerColor = '#ca8a04'; // yellow-600
-          if (section.key === 'VIDA_CRISTA') headerColor = '#b91c1c'; // red-700
+          const sectionHeaderClass = clsx(styles.sectionHeader, {
+            [styles.headerMinisterio]: section.key === 'MINISTERIO',
+            [styles.headerVidaCrista]: section.key === 'VIDA_CRISTA',
+          });
 
           return (
-            <div key={section.key} style={styles.sectionContainer}>
-              <div style={styles.sectionHeader(headerColor)}>
+            <div key={section.key} className={styles.sectionContainer}>
+              <div className={sectionHeaderClass}>
                 <span>{section.title}</span>
               </div>
               <div>
@@ -161,28 +101,44 @@ export function PrintLayout({ meetingDate, assignments, publishers, meetingParts
                       return p?.partType === 'Leitor do Estudo';
                     });
                     if (leitorAssignment) {
-                      publisherDisplay +=  / ;
+                      const leitorName = getPublisherName(leitorAssignment.principalPublisherId);
+                      publisherDisplay += ` / ${leitorName} (Leitor)`;
                     }
                   } else if (assignment.secondaryPublisherId) {
-                    publisherDisplay +=  / ;
+                    const helperName = getPublisherName(assignment.secondaryPublisherId);
+                    publisherDisplay += ` / ${helperName}`;
                   }
+
+                  const partWarnings = warningsByPart[part.partId] ?? [];
 
                   // Remove border from last item
                   const isLast = index === sectionAssignments.length - 1;
-                  const rowStyle = isLast ? { ...styles.row, borderBottom: 'none' } : styles.row;
+                  const rowClassName = clsx(styles.row, {
+                    [styles.rowLast]: isLast,
+                    [styles.rowWarning]: partWarnings.length > 0,
+                  });
 
                   return (
-                    <div key={assignment.assignmentId} style={rowStyle}>
-                      <div style={styles.time}>
+                    <div key={assignment.assignmentId} className={rowClassName}>
+                      <div className={styles.time}>
                           {assignment.startTime}
                       </div>
                       <div>
-                        <span style={styles.partTitle}>
-                          {part.partType} <span style={styles.duration}>({part.duration} min)</span>
+                        <span className={styles.partTitle}>
+                          {part.partType} <span className={styles.duration}>({part.duration} min)</span>
                         </span>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={styles.publisher}>{publisherDisplay}</span>
+                      <div className={styles.publisherColumn}>
+                        <span className={styles.publisher}>{publisherDisplay}</span>
+                        {partWarnings.length > 0 && (
+                          <div className={styles.warningChipList}>
+                            {partWarnings.map((warning, warningIndex) => (
+                              <span key={`${warning.type}-${warning.meetingPartId}-${warningIndex}`} className={styles.warningChip}>
+                                {warning.type === 'NO_CANDIDATE' ? 'Titular ausente' : warning.type === 'HELPER_MISSING' ? 'Sem ajudante' : warning.type}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -193,7 +149,7 @@ export function PrintLayout({ meetingDate, assignments, publishers, meetingParts
         })}
       </div>
       
-      <div style={styles.footer}>
+      <div className={styles.footer}>
         Gerado pelo Sistema RVM
       </div>
     </div>

@@ -1,0 +1,161 @@
+.container {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: #000000;
+  background-color: #ffffff;
+  padding: 2rem;
+  width: 100%;
+  min-height: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.header {
+  text-align: center;
+  border-bottom: 2px solid #1f2937;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: #111827;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  color: #4b5563;
+  margin: 0.5rem 0 0;
+}
+
+.warningBanner {
+  border: 1px solid #fbbf24;
+  background-color: #fefce8;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.warningTitle {
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.warningList {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #92400e;
+}
+
+.warningItem {
+  margin-bottom: 0.25rem;
+}
+
+.sectionContainer {
+  margin-bottom: 1.5rem;
+  border: 1px solid #d1d5db;
+  page-break-inside: avoid;
+  background-color: #ffffff;
+}
+
+.sectionHeader {
+  background-color: #334155;
+  color: #ffffff;
+  padding: 0.375rem 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.headerMinisterio {
+  background-color: #ca8a04;
+}
+
+.headerVidaCrista {
+  background-color: #b91c1c;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 50px 1fr 1fr;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  align-items: center;
+  font-size: 0.875rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rowLast {
+  border-bottom: none;
+}
+
+.rowWarning {
+  background-color: #fef3c7;
+  border-left: 4px solid #d97706;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.time {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: #111827;
+  font-weight: 700;
+}
+
+.partTitle {
+  font-weight: 700;
+  color: #111827;
+  display: block;
+}
+
+.duration {
+  font-weight: 400;
+  color: #4b5563;
+}
+
+.publisherColumn {
+  text-align: right;
+}
+
+.publisher {
+  font-weight: 500;
+  color: #111827;
+}
+
+.warningChip {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+  background-color: #fef3c7;
+  color: #92400e;
+  margin-left: 0.5rem;
+}
+
+.warningChipList {
+  margin-top: 0.25rem;
+}
+
+.footer {
+  margin-top: 2rem;
+  font-size: 10px;
+  text-align: center;
+  color: #9ca3af;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.5rem;
+}
