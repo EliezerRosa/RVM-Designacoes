@@ -1,0 +1,42 @@
+{
+  "name": "rvm-designacoes",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Sistema Automatizado de Designação de Partes para a Reunião Nossa Vida e Ministério Cristão",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:engine": "tsx scripts/test-engine.ts"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.48.1",
+    "@typescript-eslint/parser": "^8.48.1",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.22",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.17",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3",
+    "vite": "^6.4.1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.17",
+    "clsx": "^2.1.1",
+    "html2canvas": "^1.4.1",
+    "lucide-react": "^0.555.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.4.0"
+  }
+}
