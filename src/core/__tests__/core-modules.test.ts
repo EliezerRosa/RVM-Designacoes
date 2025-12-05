@@ -154,6 +154,23 @@ describe('AssignmentFilter', () => {
 
     expect(candidates.map(c => c.publisherId)).toEqual(['pub-fp']);
   });
+
+  it('removes helper candidates that are unavailable for the week', () => {
+    const helperPart = basePart({
+      requiresHelper: true,
+      helperRequirements: { requiredGender: 'F' },
+    });
+
+    const unavailableHelper = basePublisher({
+      publisherId: 'pub-helper',
+      gender: 'F',
+      unavailableWeeks: ['2025-12-01'],
+    });
+
+    const eligibleHelpers = AssignmentFilter.getEligibleCandidates(helperPart, [unavailableHelper], [], { mode: 'helper' });
+
+    expect(eligibleHelpers).toHaveLength(0);
+  });
 });
 
 describe('RankingEngine', () => {
@@ -197,6 +214,39 @@ describe('RankingEngine', () => {
     const clearEntry = ranked.find(entry => entry.publisher.publisherId === 'pub-clear');
 
     expect((penalizedEntry?.score ?? 0)).toBeLessThan(clearEntry?.score ?? 0);
+    expect(penalizedEntry?.debugInfo.some(info => info.includes('PENALIDADE'))).toBe(true);
+  });
+
+  it('applies cooldown penalty when a matching group appears earlier in history', () => {
+    const penalized = basePublisher({ publisherId: 'pub-chain' });
+    const clear = basePublisher({ publisherId: 'pub-chain-clear' });
+
+    const history: AssignmentHistory[] = [
+      {
+        historyId: 'h-latest',
+        publisherId: 'pub-chain',
+        date: '2025-11-28',
+        assignmentType: 'STUDENT',
+        partType: 'Outra Parte',
+        cooldownGroup: 'OTHER_GROUP'
+      },
+      {
+        historyId: 'h-target',
+        publisherId: 'pub-chain',
+        date: '2025-11-05',
+        assignmentType: 'STUDENT',
+        partType: 'Leitura',
+        cooldownGroup: 'LEITURA_CHAIN'
+      }
+    ];
+
+    const groupedPart = basePart({ partType: 'Leitura', cooldownGroup: 'LEITURA_CHAIN' });
+
+    const ranked = RankingEngine.rankCandidates([penalized, clear], groupedPart, history, meetingDate);
+
+    expect(ranked[0].publisher.publisherId).toBe('pub-chain-clear');
+    const penalizedEntry = ranked.find(entry => entry.publisher.publisherId === 'pub-chain');
+    expect(penalizedEntry?.score ?? 0).toBeLessThan(ranked[0].score);
     expect(penalizedEntry?.debugInfo.some(info => info.includes('PENALIDADE'))).toBe(true);
   });
 });
@@ -305,5 +355,51 @@ describe('AssignmentEngine warnings', () => {
     expect(result.warnings).toEqual([
       expect.objectContaining({ type: 'HELPER_MISSING', meetingPartId: 'part-helper-missing' })
     ]);
+  });
+
+  it('accumulates multiple warning types in a single run', () => {
+    const parts: MeetingPart[] = [
+      basePart({
+        partId: 'part-no-principal',
+        partType: 'Discurso Especial',
+        teachingCategory: 'TEACHING',
+        section: 'TESOUROS',
+        requiredPrivileges: ['ANCIÃO'],
+        requiredGender: 'F'
+      }),
+      basePart({
+        partId: 'part-helper-gap',
+        partType: 'Demonstração com Ancião',
+        section: 'MINISTERIO',
+        teachingCategory: 'STUDENT',
+        requiredGender: 'F',
+        requiresHelper: true,
+        helperRequirements: { requiredPrivileges: ['ANCIÃO'] },
+      })
+    ];
+
+    const publishers: Publisher[] = [
+      basePublisher({
+        publisherId: 'pub-elder',
+        privileges: ['ANCIÃO'],
+        isApprovedForTreasures: true,
+        gender: 'M',
+        canBeHelper: false,
+      }),
+      basePublisher({
+        publisherId: 'pub-student',
+        gender: 'F',
+      })
+    ];
+
+    const result = AssignmentEngine.generateAssignments(parts, publishers, [], '2025-12-01');
+
+    expect(result.assignments).toHaveLength(1);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'NO_CANDIDATE', meetingPartId: 'part-no-principal' }),
+        expect.objectContaining({ type: 'HELPER_MISSING', meetingPartId: 'part-helper-gap' })
+      ])
+    );
   });
 });

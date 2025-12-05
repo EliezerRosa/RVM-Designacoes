@@ -65,9 +65,78 @@ Cada warning segue a estrutura abaixo:
 - `meetingPartId`: parte relacionada (quando aplicável) para que a UI destaque o card correto.
 - `message`: texto pronto em português destinado ao SM.
 
+## Endpoint `GET /api/meetingData`
+
+Fornece o mesmo payload utilizado para `GenerateAssignmentsRequest`, permitindo que o front-end busque pauta, publicadores e histórico direto do backend/mock (alinhado ao Firestore futuro).
+
+```jsonc
+{
+  "meetingDate": "2025-12-01",
+  "parts": [ /* MeetingPart[] */ ],
+  "publishers": [ /* Publisher[] */ ],
+  "history": [ /* AssignmentHistory[] */ ]
+}
+```
+
+Se o backend não puder fornecer algum dos arrays ele deve retornar `[]`; o front já mantém mocks locais como fallback.
+
+## Endpoints de Aprovação
+
+Para persistir o estado de aprovação por parte/semana (simulando a coleção `meetingWeeks/{weekId}/assignments` do Firestore) existem dois recursos:
+
+### `GET /api/assignmentApprovals?meetingDate=YYYY-MM-DD`
+
+Retorna a lista de aprovações já armazenadas para a semana.
+
+```jsonc
+{
+  "records": [
+    {
+      "assignmentId": "uuid",
+      "meetingPartId": "part-001",
+      "meetingDate": "2025-12-01",
+      "status": "APPROVED",
+      "approvedByElderId": "pub-001",
+      "updatedAt": "2025-12-01T23:15:00.000Z"
+    }
+  ]
+}
+```
+
+> A chave lógica usada pelo mock (e futura coleção) é `meetingDate::meetingPartId`.
+
+### `POST /api/assignmentApprovals`
+
+Persiste/atualiza o status de uma única parte.
+
+```jsonc
+{
+  "assignmentId": "uuid",
+  "meetingPartId": "part-001",
+  "meetingDate": "2025-12-01",
+  "status": "REJECTED",
+  "approvedByElderId": "pub-021"
+}
+```
+
+### `POST /api/assignmentApprovals/bulk`
+
+Permite enviar várias atualizações de uma só vez (utilizado quando o ancião aprova toda a semana).
+
+```jsonc
+{
+  "meetingDate": "2025-12-01",
+  "updates": [
+    { "assignmentId": "uuid-1", "meetingPartId": "part-001", "status": "APPROVED" },
+    { "assignmentId": "uuid-2", "meetingPartId": "part-002", "status": "APPROVED" }
+  ]
+}
+```
+
 ## Consumo pelo Front-end {#frontend-api}
 
 - O cliente React executa `POST` para a URL definida em `VITE_ASSIGNMENTS_API`. Caso não esteja configurada, o fallback padrão é `http://127.0.0.1:3333/api/generateAssignments` (servidor mock em `scripts/mock-api.ts`).
+- `VITE_API_BASE` (opcional) aponta para o prefixo `/api` e é usado para os endpoints de dataset (`/meetingData`) e aprovação (`/assignmentApprovals`). Se omitido, ele é inferido a partir de `VITE_ASSIGNMENTS_API`.
 - Configure `.env` a partir de `.env.example`, ajustando `VITE_ASSIGNMENTS_API` conforme o ambiente.
 - Em caso de falha de rede/API, o front-end recorre ao `AssignmentEngine` local e exibe aviso “API indisponível. Exibindo dados do motor local.”
 - O payload enviado segue exatamente o contrato `GenerateAssignmentsRequest`; qualquer campo adicional deve ser versionado nesse documento antes de chegar ao front.
